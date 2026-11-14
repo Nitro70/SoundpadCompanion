@@ -1,0 +1,175 @@
+<UserControl x:Class="SoundpadCompanion.Settings.SettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="{StaticResource BackgroundBrush}">
+
+    <UserControl.Resources>
+        <Style x:Key="HotkeyMessageText" TargetType="TextBlock" BasedOn="{StaticResource Muted}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding HotkeyFailed}" Value="True">
+                    <Setter Property="Foreground" Value="{StaticResource DangerBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="ConnectionDot" TargetType="Ellipse">
+            <Setter Property="Fill" Value="{StaticResource DangerBrush}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Connected}" Value="True">
+                    <Setter Property="Fill" Value="{StaticResource OkBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="NoFoldersText" TargetType="TextBlock" BasedOn="{StaticResource Muted}">
+            <Setter Property="Visibility" Value="Collapsed" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Rules.Count}" Value="0">
+                    <Setter Property="Visibility" Value="Visible" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="LogItem" TargetType="ListBoxItem">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <ContentPresenter Margin="0,1" />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="22,20,22,10">
+
+            <!-- Header -->
+            <Grid Margin="0,0,0,18">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="Soundpad Companion" FontSize="21" FontWeight="SemiBold" />
+                    <TextBlock Text="Search overlay and folder auto-import for Soundpad" Style="{StaticResource Muted}" Margin="0,2,0,0" />
+                </StackPanel>
+                <Border Grid.Column="1" VerticalAlignment="Center" Background="{StaticResource SurfaceBrush}"
+                        BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="14" Padding="12,6">
+                    <StackPanel Orientation="Horizontal">
+                        <Ellipse Width="8" Height="8" Style="{StaticResource ConnectionDot}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <TextBlock Text="{Binding ConnectionText}" FontSize="12" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- Search overlay -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="SEARCH OVERLAY" Style="{StaticResource SectionLabel}" />
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Hotkey" VerticalAlignment="Center" Width="70" />
+                        <TextBox x:Name="HotkeyBox" Width="250" IsReadOnly="True" IsReadOnlyCaretVisible="False" Cursor="Hand"
+                                 Text="{Binding HotkeyText, Mode=OneWay}"
+                                 ToolTip="Click, then press the key combination you want" />
+                        <Button Content="Open it now" Style="{StaticResource GhostButton}" Margin="10,0,0,0"
+                                Command="{Binding TryOverlayCommand}" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding HotkeyMessage}" Style="{StaticResource HotkeyMessageText}" Margin="70,6,0,0" />
+                    <CheckBox Content="Close the overlay once a sound starts" IsChecked="{Binding CloseAfterPlay}" Margin="0,14,0,0" />
+                    <TextBlock Style="{StaticResource Muted}" Margin="0,12,0,0"
+                               Text="In the overlay: click a sound or press Enter to play it the way Soundpad normally would. Hold Shift to play it on your speakers only (a preview), or Ctrl for the mic only. Arrow keys or the mouse wheel move through the list, Esc closes and puts you back in your game." />
+                </StackPanel>
+            </Border>
+
+            <!-- Folder import -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="FOLDER IMPORT" Style="{StaticResource SectionLabel}" />
+                    <TextBlock Style="{StaticResource Muted}" Margin="0,0,0,12"
+                               Text="Audio files dropped into these folders are added to Soundpad in the category you pick. Files already in a folder when you add it are left alone (Import existing adds them). Nothing already in Soundpad is added twice." />
+
+                    <TextBlock Text="No folders yet." Style="{StaticResource NoFoldersText}" Margin="0,0,0,12" />
+
+                    <ItemsControl x:Name="RulesList" ItemsSource="{Binding Rules}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{StaticResource SurfaceAltBrush}" BorderBrush="{StaticResource BorderBrush}"
+                                        BorderThickness="1" CornerRadius="8" Padding="12,10" Margin="0,0,0,10">
+                                    <StackPanel>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <CheckBox IsChecked="{Binding Enabled}" VerticalAlignment="Center" ToolTip="Watch this folder" />
+                                            <TextBlock Grid.Column="1" Text="{Binding Folder}" ToolTip="{Binding Folder}"
+                                                       TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="2,0,10,0" FontWeight="SemiBold" />
+                                            <Button Grid.Column="2" Content="Change folder" Style="{StaticResource GhostButton}"
+                                                    Command="{Binding BrowseCommand}" Padding="10,5" />
+                                            <Button Grid.Column="3" Content="Remove" Style="{StaticResource GhostButton}"
+                                                    Command="{Binding RemoveCommand}" Padding="10,5" Margin="6,0,0,0" />
+                                        </Grid>
+                                        <Grid Margin="0,10,0,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="210" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="Category" VerticalAlignment="Center" Margin="0,0,10,0" />
+                                            <ComboBox Grid.Column="1" Style="{StaticResource EditableCombo}"
+                                                      ItemsSource="{Binding DataContext.CategoryNames, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                      Text="{Binding Category, UpdateSourceTrigger=PropertyChanged}"
+                                                      ToolTip="Pick a category or type a new name (it gets created). Blank means All sounds only." />
+                                            <CheckBox Grid.Column="2" Content="Include subfolders" IsChecked="{Binding IncludeSubfolders}"
+                                                      Margin="14,0,0,0" VerticalAlignment="Center" />
+                                            <Button Grid.Column="4" Content="Import existing" Style="{StaticResource GhostButton}"
+                                                    Command="{Binding ImportExistingCommand}" Padding="10,5"
+                                                    ToolTip="Add every audio file in this folder that isn't in Soundpad yet" />
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                        <Button Content="+  Add folder" Style="{StaticResource AccentButton}" Command="{Binding AddFolderCommand}" />
+                    </StackPanel>
+                    <CheckBox Content="When the app starts, import files that arrived while it was closed"
+                              IsChecked="{Binding CatchUpOnStart}" Margin="0,14,0,0" />
+                </StackPanel>
+            </Border>
+
+            <!-- General -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="GENERAL" Style="{StaticResource SectionLabel}" />
+                    <CheckBox Content="Start with Windows (sits in the tray)" IsChecked="{Binding StartWithWindows}" />
+                    <TextBlock Style="{StaticResource Muted}" Margin="0,10,0,0"
+                               Text="Closing this window keeps the app running in the tray. Right-click the tray icon to quit." />
+                </StackPanel>
+            </Border>
+
+            <!-- Activity -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="ACTIVITY" Style="{StaticResource SectionLabel}" />
+                    <ListBox ItemsSource="{Binding Log}" Height="160" Background="Transparent" BorderThickness="0"
+                             ItemContainerStyle="{StaticResource LogItem}"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding}" Style="{StaticResource Muted}" FontFamily="Consolas" FontSize="11.5" />
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

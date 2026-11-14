@@ -1,0 +1,7 @@
+<Project>
+  <!-- Release builds of every project record source and PDB paths as /_/..., not this machine's folders. -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+</Project>

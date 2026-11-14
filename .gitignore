@@ -1,0 +1,13 @@
+[Bb]in/
+[Oo]bj/
+publish/
+build/
+dist/
+*.user
+.vs/
+TestResults/
+*.log
+
+# Local assistant and notes files never go public
+.claude/
+CLAUDE.md

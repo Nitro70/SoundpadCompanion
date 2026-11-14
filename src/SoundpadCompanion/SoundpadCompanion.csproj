@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <!-- NotifyIcon (the tray icon) lives in WinForms. -->
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>SoundpadCompanion</AssemblyName>
+    <RootNamespace>SoundpadCompanion</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+    <Version>0.1.0</Version>
+    <Product>Soundpad Companion</Product>
+    <Authors>Nitro70</Authors>
+    <Company>Nitro70</Company>
+    <Copyright>Copyright (c) 2026 Nitro70</Copyright>
+    <Description>Quick-search overlay and folder auto-import for Soundpad, over its remote control pipe.</Description>
+    <!-- WFO0003 asks WinForms apps to set DPI in code; this is a WPF app (WinForms only for the tray
+         icon), and WPF reads DPI awareness from the manifest. -->
+    <NoWarn>$(NoWarn);WFO0003</NoWarn>
+  </PropertyGroup>
+
+  <!-- Only when publishing for a runtime: one self-contained exe. Plain builds and tests stay framework-dependent. -->
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' != ''">
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <DebugType>none</DebugType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- WinForms implicit usings collide with WPF names (Application, KeyEventArgs...). -->
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\app.ico" />
+    <InternalsVisibleTo Include="SoundpadCompanion.Tests" />
+  </ItemGroup>
+
+</Project>
