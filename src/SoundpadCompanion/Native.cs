@@ -37,6 +37,23 @@ internal static class Native
     public static extern bool UnregisterHotKey(IntPtr hWnd, int id);
 
     [DllImport("user32.dll")]
+    public static extern short GetAsyncKeyState(int vKey);
+
+    /// <summary>
+    /// True while any keyboard key is physically held down. Mouse buttons (virtual keys 1 to 6)
+    /// are not counted: a click has already been released by the time it plays a sound.
+    /// </summary>
+    public static bool AnyKeyDown()
+    {
+        for (int vk = 0x08; vk <= 0xFE; vk++)
+        {
+            if ((GetAsyncKeyState(vk) & 0x8000) != 0)
+                return true;
+        }
+        return false;
+    }
+
+    [DllImport("user32.dll")]
     public static extern IntPtr GetForegroundWindow();
 
     [DllImport("user32.dll")]

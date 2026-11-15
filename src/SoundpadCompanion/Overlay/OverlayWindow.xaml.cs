@@ -18,6 +18,7 @@ public partial class OverlayWindow : Window
     private readonly SoundpadApi _api;
     private readonly Func<AppConfig> _config;
     private readonly IActivityLog _log;
+    private readonly KeyReleaseWait _release = new(Native.AnyKeyDown, TimeSpan.FromMilliseconds(10), TimeSpan.FromSeconds(2));
 
     private IntPtr _returnFocusTo;
     private Task _refresh = Task.CompletedTask;
@@ -35,8 +36,14 @@ public partial class OverlayWindow : Window
         InitializeComponent();
         DataContext = Vm;
         PreviewKeyDown += OnPreviewKeyDown;
+        // While closing, keys still land here (that is the point); none of them may type into the search.
+        PreviewTextInput += (_, e) => e.Handled |= _release.IsWaiting;
         Deactivated += (_, _) => HideOverlay(restoreFocus: false);
-        View.RowClicked += (row, modifiers) => _ = PlayAsync(row, TargetFor(modifiers));
+        View.RowClicked += (row, modifiers) =>
+        {
+            if (!_release.IsWaiting)
+                _ = PlayAsync(row, TargetFor(modifiers));
+        };
         // A new search keeps the old scroll offset otherwise; bring the highlighted row into view.
         Vm.PropertyChanged += (_, e) =>
         {
@@ -47,14 +54,16 @@ public partial class OverlayWindow : Window
 
     public void Toggle()
     {
-        if (IsVisible)
-            HideOverlay(restoreFocus: true);
+        if (IsVisible && !_release.IsWaiting)
+            CloseToGame();
         else
-            ShowOverlay();
+            ShowOverlay();   // also takes back an overlay that is still waiting to close
     }
 
     public void ShowOverlay()
     {
+        _release.Cancel();
+        Opacity = 1;
         IntPtr self = new WindowInteropHelper(this).EnsureHandle();
         IntPtr foreground = Native.GetForegroundWindow();
         if (!IsVisible)
@@ -71,6 +80,21 @@ public partial class OverlayWindow : Window
         _refresh = RefreshAsync();
     }
 
+    /// <summary>
+    /// Closes the overlay and gives focus back to the game, but only once every key is up.
+    /// Handing it over while the Enter or Esc that closed the overlay is still held would let
+    /// the game see that key (see <see cref="KeyReleaseWait"/>). Until then the overlay is
+    /// invisible but keeps focus and swallows keys, so they are released here, not in the game.
+    /// </summary>
+    public void CloseToGame()
+    {
+        if (!IsVisible || _release.IsWaiting)
+            return;
+        Opacity = 0;
+        _release.Start(() => HideOverlay(restoreFocus: true));
+    }
+
+    /// <summary>Hides at once. Use <see cref="CloseToGame"/> when a key press is what closes it.</summary>
     /// <param name="restoreFocus">Hand focus back to the window that was in front before (the game).</param>
     public void HideOverlay(bool restoreFocus)
     {
@@ -86,6 +110,8 @@ public partial class OverlayWindow : Window
         }
         finally
         {
+            _release.Cancel();
+            Opacity = 1;
             _hiding = false;
         }
     }
@@ -141,7 +167,7 @@ public partial class OverlayWindow : Window
 
             await _api.PlayAsync(current.Sound.Index, target);
             if (_config().CloseAfterPlay)
-                HideOverlay(restoreFocus: true);
+                CloseToGame();
             else
                 Vm.SetStatus($"Playing {current.Sound.DisplayTitle}", isError: false);
         }
@@ -162,10 +188,15 @@ public partial class OverlayWindow : Window
 
     private void OnPreviewKeyDown(object sender, KeyEventArgs e)
     {
+        if (_release.IsWaiting)
+        {
+            e.Handled = true;   // closing: a held Enter's auto-repeat must not play another sound
+            return;
+        }
         switch (e.Key)
         {
             case Key.Escape:
-                HideOverlay(restoreFocus: true);
+                CloseToGame();
                 break;
             case Key.Down:
                 Step(1);
