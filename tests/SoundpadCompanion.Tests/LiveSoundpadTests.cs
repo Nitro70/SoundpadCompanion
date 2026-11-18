@@ -13,6 +13,21 @@ public class LiveSoundpadTests
     private static bool Live => Environment.GetEnvironmentVariable("SPC_LIVE") == "1";
 
     [Fact]
+    public void Finds_the_volume_adjustment_in_the_running_Soundpad_without_changing_it()
+    {
+        if (!Live)
+            return;
+        var saved = SoundpadRegistry.ReadAudioSettings();
+        Assert.NotNull(saved);
+        var boost = new MicBoost(new SoundpadApi(new SoundpadPipe()), new SoundpadProcessMemory(),
+            SoundpadRegistry.ReadAudioSettings, TimeSpan.FromSeconds(1.5), TimeSpan.FromSeconds(0.4));
+
+        string text = boost.Describe();
+
+        Assert.Contains($"now {saved!.AdjustDb.ToString("+0.#;-0.#;0", System.Globalization.CultureInfo.InvariantCulture)} dB", text);
+    }
+
+    [Fact]
     public async Task Reads_the_real_sound_list_and_categories()
     {
         if (!Live)

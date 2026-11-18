@@ -12,6 +12,12 @@ public sealed class SoundpadOfflineException : SoundpadException
     public SoundpadOfflineException(string message, Exception? inner = null) : base(message, inner) { }
 }
 
+/// <summary>The +30 dB mic boost can't be done; the message says why, in words for the overlay.</summary>
+public sealed class MicBoostException : SoundpadException
+{
+    public MicBoostException(string message, Exception? inner = null) : base(message, inner) { }
+}
+
 /// <summary>Soundpad answered, but with an error code (R-400, R-404, R-500...).</summary>
 public sealed class SoundpadCommandException : SoundpadException
 {

@@ -36,6 +36,22 @@ internal static class Native
     [DllImport("user32.dll", SetLastError = true)]
     public static extern bool UnregisterHotKey(IntPtr hWnd, int id);
 
+    public const uint PROCESS_VM_OPERATION = 0x0008;
+    public const uint PROCESS_VM_READ = 0x0010;
+    public const uint PROCESS_VM_WRITE = 0x0020;
+    public const uint PROCESS_QUERY_INFORMATION = 0x0400;
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    public static extern Microsoft.Win32.SafeHandles.SafeProcessHandle OpenProcess(uint access, bool inheritHandle, int processId);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    public static extern bool ReadProcessMemory(
+        Microsoft.Win32.SafeHandles.SafeProcessHandle process, IntPtr address, byte[] buffer, nint size, out nint read);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    public static extern bool WriteProcessMemory(
+        Microsoft.Win32.SafeHandles.SafeProcessHandle process, IntPtr address, byte[] buffer, nint size, out nint written);
+
     [DllImport("user32.dll")]
     public static extern short GetAsyncKeyState(int vKey);
 

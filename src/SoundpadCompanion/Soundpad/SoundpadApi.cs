@@ -30,6 +30,15 @@ public sealed class SoundpadApi(ISoundpadTransport transport)
             : throw new SoundpadCommandException("GetSoundFileCount()", reply);
     }
 
+    /// <summary>Where Soundpad's player is, in ms. When stopped it still reports where the last sound ended.</summary>
+    public async Task<long> GetPlaybackPositionAsync(CancellationToken ct = default)
+    {
+        string reply = await GetAsync("GetPlaybackPositionInMs()", ct).ConfigureAwait(false);
+        return long.TryParse(reply, NumberStyles.Integer, CultureInfo.InvariantCulture, out long ms)
+            ? ms
+            : throw new SoundpadCommandException("GetPlaybackPositionInMs()", reply);
+    }
+
     public async Task<IReadOnlyList<Sound>> GetSoundsAsync(CancellationToken ct = default) =>
         SoundpadXml.ParseSoundlist(await GetAsync("GetSoundlist()", ct).ConfigureAwait(false));
 

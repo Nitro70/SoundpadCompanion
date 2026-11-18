@@ -35,6 +35,16 @@ public class SoundpadApiTests
     }
 
     [Fact]
+    public async Task Playback_position_is_read_in_milliseconds()
+    {
+        var fake = new FakeSoundpad { Override = c => c == "GetPlaybackPositionInMs()" ? "1234" : null };
+        var api = new SoundpadApi(fake);
+
+        Assert.Equal(1234, await api.GetPlaybackPositionAsync());
+        Assert.Equal(["GetPlaybackPositionInMs()"], fake.Commands);
+    }
+
+    [Fact]
     public async Task Error_codes_become_command_exceptions()
     {
         var fake = new FakeSoundpad { Override = _ => "R-404" };
