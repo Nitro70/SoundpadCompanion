@@ -38,6 +38,10 @@ public sealed class TrayIcon : IDisposable
         set => _icon.Text = value.Length > 63 ? value[..63] : value;
     }
 
+    /// <summary>A notification from the tray icon, for things that must not go unnoticed.</summary>
+    public void Warn(string text) =>
+        _icon.ShowBalloonTip(10_000, "Soundpad Companion", text, Forms.ToolTipIcon.Warning);
+
     public void Dispose()
     {
         _icon.Visible = false;

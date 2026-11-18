@@ -89,6 +89,11 @@ public partial class App : Application, ISettingsHost
 
         _tray = new TrayIcon(OpenOverlay, ShowSettings, Quit);
         _tray.Tooltip = $"Soundpad Companion ({Config.Hotkey} to search)";
+        Boost.PutBackFailed += message => Dispatcher.BeginInvoke(() =>
+        {
+            _log.Add(message);
+            _tray?.Warn(message);
+        });
 
         _showSignal = new EventWaitHandle(false, EventResetMode.AutoReset, ShowSignalName);
         new Thread(ListenForShowSignal) { IsBackground = true, Name = "Show settings signal" }.Start();
@@ -244,6 +249,11 @@ public partial class App : Application, ISettingsHost
         {
             report.Add($"info  mic boost: {ex.Message}");
         }
+        catch (Exception ex)
+        {
+            failures++;
+            report.Add($"FAIL  mic boost: {ex.GetType().Name}: {ex.Message}");
+        }
 
         report.Add(failures == 0 ? "PASS" : $"{failures} FAILED");
         if (reportPath is not null)
@@ -262,8 +272,9 @@ public partial class App : Application, ISettingsHost
             if (Boost.RecoverIfStuck() is { } fixedIt)
                 _log.Add(fixedIt);
         }
-        catch (MicBoostException e)
+        catch (Exception e)
         {
+            // Never let this stop the app starting.
             _log.Add($"+30 dB boost check at start: {e.Message}");
         }
     }

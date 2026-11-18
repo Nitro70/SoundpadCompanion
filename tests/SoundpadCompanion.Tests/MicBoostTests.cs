@@ -266,6 +266,124 @@ public class MicBoostTests
         Assert.Equal([Block + 12], MicBoost.FindAdjustment(image, Saved, -9f));
         Assert.Equal([Block + 12], MicBoost.FindAdjustment(shifted, Saved, -9f));
     }
+
+    // ---- final review fixes ----
+
+    [Fact]
+    public async Task Waits_through_position_zero_until_the_sound_is_really_playing()
+    {
+        // Accepted but not producing audio yet (a slow file): the position can sit at 0 first.
+        var s = Normal();
+        s.Positions.Clear();
+        foreach (string p in new[] { "2073", "0", "0", "35" })
+            s.Positions.Enqueue(p);
+
+        await s.Boost().PlayBoostedAsync(5);
+
+        Assert.Equal(3, s.Events.Count(e => e == "GetPlaybackPositionInMs()") - 1);
+        Assert.Equal("write -9", s.Events[^1]);
+    }
+
+    [Fact]
+    public async Task Puts_the_value_back_on_time_when_Soundpad_stops_answering()
+    {
+        var s = Normal();
+        var hanging = new HangAfterPlay(s.Pipe);
+        var boost = new MicBoost(new SoundpadApi(hanging), s.Memory, () => s.Settings, TimeSpan.FromMilliseconds(200), TimeSpan.Zero);
+
+        var run = boost.PlayBoostedAsync(5);
+        var finished = await Task.WhenAny(run, Task.Delay(TimeSpan.FromSeconds(3)));
+
+        Assert.Same(run, finished);
+        await run;
+        Assert.Equal(-9f, s.Memory.FloatAt(Block + 12));
+    }
+
+    [Fact]
+    public async Task Refuses_when_the_saved_value_is_already_30()
+    {
+        // Soundpad saves its settings by itself; a boost cut off before Soundpad closed can end up saved.
+        var s = new Setup(Image((Block, 30f)));
+        s.Settings = Saved with { AdjustDb = 30f };
+
+        var e = await Assert.ThrowsAsync<MicBoostException>(() => s.Boost().PlayBoostedAsync(5));
+
+        Assert.Contains("Preferences", e.Message);
+        Assert.Empty(s.Events);
+    }
+
+    [Fact]
+    public void Recover_warns_when_the_saved_value_is_30()
+    {
+        var s = new Setup(Image((Block, 30f)));
+        s.Settings = Saved with { AdjustDb = 30f };
+
+        string? message = s.Boost().RecoverIfStuck();
+
+        Assert.NotNull(message);
+        Assert.Contains("Preferences", message);
+        Assert.Empty(s.Events);
+    }
+
+    [Fact]
+    public async Task A_failed_put_back_is_tried_again()
+    {
+        var s = Normal();
+        s.Memory.IgnoreWritesOf = -9f;
+        s.Memory.IgnoreTimes = 2;
+
+        await s.Boost().PlayBoostedAsync(5);
+
+        Assert.Equal(3, s.Events.Count(e => e == "write -9"));
+        Assert.Equal(-9f, s.Memory.FloatAt(Block + 12));
+    }
+
+    [Fact]
+    public async Task A_put_back_that_keeps_failing_is_reported_and_owed()
+    {
+        var s = Normal();
+        s.Memory.IgnoreWritesOf = -9f;
+        var boost = s.Boost();
+        var reported = new List<string>();
+        boost.PutBackFailed += reported.Add;
+
+        await Assert.ThrowsAsync<MicBoostException>(() => boost.PlayBoostedAsync(5));
+
+        Assert.Single(reported);
+        Assert.Contains("+30", reported[0]);
+        Assert.True(boost.Owed);
+    }
+
+    [Fact]
+    public async Task Recover_settles_an_owed_put_back()
+    {
+        var s = Normal();
+        s.Memory.IgnoreWritesOf = -9f;
+        var boost = s.Boost();
+        await Assert.ThrowsAsync<MicBoostException>(() => boost.PlayBoostedAsync(5));
+        Assert.True(boost.Owed);
+        s.Memory.IgnoreWritesOf = null;
+
+        Assert.NotNull(boost.RecoverIfStuck());
+
+        Assert.False(boost.Owed);
+        Assert.Equal(-9f, s.Memory.FloatAt(Block + 12));
+    }
+
+    /// <summary>Answers like the fake until the play, then never answers a position request (until cancelled).</summary>
+    private sealed class HangAfterPlay(FakeSoundpad inner) : ISoundpadTransport
+    {
+        private bool _played;
+
+        public async Task<string> RequestAsync(string command, CancellationToken ct = default)
+        {
+            if (_played && command == "GetPlaybackPositionInMs()")
+                await Task.Delay(Timeout.Infinite, ct);
+            if (command.StartsWith("DoPlaySound(", StringComparison.Ordinal))
+                _played = true;
+            return await inner.RequestAsync(command, ct);
+        }
+    }
 }
 
 /// <summary>Soundpad.exe's image as a byte array. Writes are logged as "write N" into the shared event list.</summary>
@@ -275,6 +393,8 @@ internal sealed class FakeSoundpadMemory(byte[] image, List<string> events) : IS
 
     public bool Running { get; set; } = true;
     public float? IgnoreWritesOf { get; set; }
+    /// <summary>How many writes of <see cref="IgnoreWritesOf"/> to drop; null drops them all.</summary>
+    public int? IgnoreTimes { get; set; }
 
     public float FloatAt(int offset) => BitConverter.ToSingle(_image, offset);
 
@@ -292,8 +412,13 @@ internal sealed class FakeSoundpadMemory(byte[] image, List<string> events) : IS
         {
             float value = BitConverter.ToSingle(data);
             owner._events.Add($"write {value.ToString(System.Globalization.CultureInfo.InvariantCulture)}");
-            if (owner.IgnoreWritesOf != value)
-                data.CopyTo(owner._image, (int)(address - Base));
+            if (owner.IgnoreWritesOf == value && owner.IgnoreTimes is not <= 0)
+            {
+                if (owner.IgnoreTimes is { } left)
+                    owner.IgnoreTimes = left - 1;
+                return;
+            }
+            data.CopyTo(owner._image, (int)(address - Base));
         }
 
         public void Dispose() { }

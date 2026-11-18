@@ -9,7 +9,7 @@ A small Windows tray app that adds two things to [Soundpad](https://www.leppsoft
 
 It does not patch or inject anything into Soundpad. It talks to Soundpad through Soundpad's own [remote control interface](https://www.leppsoft.com/soundpad/rc), the local named pipe `\\.\pipe\sp_remote_control` that Stream Deck and Touch Portal plugins also use. Not affiliated with Leppsoft.
 
-**Status: early (0.1.1).** The overlay has been used over a game with a real Soundpad 4.0.35: searching, playing a sound and closing back to the game. The Shift boost has been measured on a real Soundpad 4.0.35 (see [below](#the-30-db-boost)). The folder import is covered by automated tests against a simulated Soundpad, plus read-only checks against a real one, but has not been confirmed on a real install yet. If the first import fails, the Activity list in the settings window shows Soundpad's error code; please open an issue with it.
+**Status: early (0.1.1).** The overlay has been used over a game with a real Soundpad 4.0.35: searching, playing a sound and closing back to the game. The idea behind the Shift boost was measured on a real Soundpad 4.0.35 (see [below](#the-30-db-boost)), but the app's own Shift boost has not been tried on a real install yet. The folder import is covered by automated tests against a simulated Soundpad, plus read-only checks against a real one, but has not been confirmed on a real install yet. If the first import fails, the Activity list in the settings window shows Soundpad's error code; please open an issue with it.
 
 ## Download
 
@@ -41,14 +41,15 @@ The overlay is a normal always-on-top window, so it shows over games running **b
 
 ### The +30 dB boost
 
-Soundpad's Preferences, Audio tab, has **Volume adjustment by** under "Fixed volume adjustment". It changes how loud sounds are on the mic only; your speakers are not affected. Holding Shift sets it to +30 dB (the top of Soundpad's own list) for that one sound and puts your own value back as soon as the sound has started, because Soundpad reads it once per sound. At +30 dB most sounds go far past the loudest level audio can carry, so they come out clipped and distorted.
+Soundpad's Preferences, Audio tab, has **Volume adjustment by** under "Fixed volume adjustment". It changes how loud sounds are on the mic only; your speakers are not affected. Holding Shift sets it to +30 dB (the top of Soundpad's own list) for that one sound and puts your own value back once the sound has started (and at least 0.4 s after the play), because Soundpad reads it once per sound. Any other sound Soundpad starts in that moment, from its own hotkeys for example, is boosted too. At +30 dB most sounds go far past the loudest level audio can carry, so they come out clipped and distorted.
 
 Soundpad's remote control has no command for this setting, so the app changes it in Soundpad's memory while Soundpad runs. It finds the setting by the values Soundpad saved in the registry and changes nothing unless it finds exactly one match. Soundpad's saved settings are never written.
 
 - Needs "Fixed volume adjustment" in Soundpad (not "Dynamic"); otherwise Shift explains that and plays nothing.
 - Tested with Soundpad 4.0.35. If an update lays Soundpad out differently, Shift says the version isn't recognised and plays nothing. It never falls back to playing at normal volume.
-- If the app is closed in the middle of a boost, it puts your value back the next time it starts. Restarting Soundpad also resets it.
-- Some antivirus programs dislike one program writing to another's memory. If yours blocks it, Shift shows the error and nothing else changes.
+- If putting your value back fails, the app retries, then warns you from the tray icon and won't play anything until it's fixed. If the app is closed in the middle of a boost, it puts your value back the next time it starts.
+- Soundpad saves its settings to the registry by itself, so if Soundpad is closed while still at +30 it may keep +30. The app then says so when it starts and Shift refuses; set **Volume adjustment by** back in Soundpad's Preferences.
+- Some antivirus programs dislike one program writing to another's memory. If yours blocks it, Shift shows the error and plays nothing.
 - `SoundpadCompanion.exe --selftest report.txt` reports where it found the setting and what it is now, without changing it.
 
 ### Folder import

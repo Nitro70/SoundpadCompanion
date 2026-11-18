@@ -171,6 +171,14 @@ public partial class OverlayWindow : Window
             }
             else
             {
+                // A boost whose put-back failed would make this play go out at +30 too.
+                if (_boost.Owed)
+                    _boost.RecoverIfStuck();
+                if (_boost.Owed)
+                {
+                    Vm.SetStatus("Soundpad's mic adjustment may be stuck at +30 dB. Restart Soundpad Companion to fix it.", isError: true);
+                    return;
+                }
                 await _api.PlayAsync(current.Sound.Index, PlayTarget.SoundpadDefault);
                 AfterPlay(current.Sound, boost);
             }
