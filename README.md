@@ -2,14 +2,14 @@
 
 A small Windows tray app that adds two things to [Soundpad](https://www.leppsoft.com/soundpad/):
 
-- **Quick-search overlay.** Press a hotkey (Ctrl+Shift+Space by default) anywhere, even in a game, type a few letters of a sound and click it or press Enter to play it. Esc puts you straight back where you were.
+- **Quick-search overlay.** Press a hotkey (Ctrl+Shift+Space by default) anywhere, even in a game, type a few letters of a sound and click it or press Enter to play it. Hold Shift to send it 30 dB louder (distorted) to whoever hears your mic, while you hear it as normal. Esc puts you straight back where you were.
 - **Folder auto-import.** Pick a folder and a Soundpad category. Any audio file you drop into that folder is added to Soundpad in that category.
 
 ![The search overlay](docs/overlay.png)
 
 It does not patch or inject anything into Soundpad. It talks to Soundpad through Soundpad's own [remote control interface](https://www.leppsoft.com/soundpad/rc), the local named pipe `\\.\pipe\sp_remote_control` that Stream Deck and Touch Portal plugins also use. Not affiliated with Leppsoft.
 
-**Status: early (0.1.1).** The overlay has been used over a game with a real Soundpad 4.0.35: searching, playing a sound and closing back to the game. The folder import is covered by automated tests against a simulated Soundpad, plus read-only checks against a real one, but has not been confirmed on a real install yet. If the first import fails, the Activity list in the settings window shows Soundpad's error code; please open an issue with it.
+**Status: early (0.1.1).** The overlay has been used over a game with a real Soundpad 4.0.35: searching, playing a sound and closing back to the game. The Shift boost has been measured on a real Soundpad 4.0.35 (see [below](#the-30-db-boost)). The folder import is covered by automated tests against a simulated Soundpad, plus read-only checks against a real one, but has not been confirmed on a real install yet. If the first import fails, the Activity list in the settings window shows Soundpad's error code; please open an issue with it.
 
 ## Download
 
@@ -28,8 +28,7 @@ Run `SoundpadCompanion.exe`. The first time, the settings window opens. After th
 | type | search titles, file names, artists and category names |
 | Up / Down, Page Up / Page Down, mouse wheel | move through the results (the wheel works anywhere on the overlay) |
 | click a sound, or Enter | play it the way Soundpad normally would |
-| hold Shift while clicking or pressing Enter | play it on your speakers only (a preview nobody else hears) |
-| hold Ctrl while clicking or pressing Enter | play it on the mic only |
+| hold Shift while clicking or pressing Enter | play it 30 dB louder on the mic (distorted); you hear it at your normal volume |
 | Esc | close and give focus back to the game |
 
 When the overlay closes, the game gets its focus back only once you have let go of every key, so the Enter or Esc you pressed (and any Shift or Ctrl) never reaches the game.
@@ -39,6 +38,18 @@ A click plays when the button is pressed and released on the same sound, so pres
 With an empty search box it lists your most recently played sounds. Every word you type has to match; matches in the title rank first, and sounds you play more often win ties. If nothing matches exactly, it falls back to matching letters in order, so small typos still find things.
 
 The overlay is a normal always-on-top window, so it shows over games running **borderless or windowed**. A game in exclusive fullscreen may minimise when the overlay takes focus; switch the game to borderless if that happens.
+
+### The +30 dB boost
+
+Soundpad's Preferences, Audio tab, has **Volume adjustment by** under "Fixed volume adjustment". It changes how loud sounds are on the mic only; your speakers are not affected. Holding Shift sets it to +30 dB (the top of Soundpad's own list) for that one sound and puts your own value back as soon as the sound has started, because Soundpad reads it once per sound. At +30 dB most sounds go far past the loudest level audio can carry, so they come out clipped and distorted.
+
+Soundpad's remote control has no command for this setting, so the app changes it in Soundpad's memory while Soundpad runs. It finds the setting by the values Soundpad saved in the registry and changes nothing unless it finds exactly one match. Soundpad's saved settings are never written.
+
+- Needs "Fixed volume adjustment" in Soundpad (not "Dynamic"); otherwise Shift explains that and plays nothing.
+- Tested with Soundpad 4.0.35. If an update lays Soundpad out differently, Shift says the version isn't recognised and plays nothing. It never falls back to playing at normal volume.
+- If the app is closed in the middle of a boost, it puts your value back the next time it starts. Restarting Soundpad also resets it.
+- Some antivirus programs dislike one program writing to another's memory. If yours blocks it, Shift shows the error and nothing else changes.
+- `SoundpadCompanion.exe --selftest report.txt` reports where it found the setting and what it is now, without changing it.
 
 ### Folder import
 
