@@ -16,6 +16,7 @@ namespace SoundpadCompanion.Overlay;
 public partial class OverlayWindow : Window
 {
     private readonly SoundpadApi _api;
+    private readonly MicBoost _boost;
     private readonly Func<AppConfig> _config;
     private readonly IActivityLog _log;
     private readonly KeyReleaseWait _release = new(Native.AnyKeyDown, TimeSpan.FromMilliseconds(10), TimeSpan.FromSeconds(2));
@@ -28,9 +29,10 @@ public partial class OverlayWindow : Window
 
     public OverlayViewModel Vm { get; } = new();
 
-    public OverlayWindow(SoundpadApi api, Func<AppConfig> config, IActivityLog log)
+    public OverlayWindow(SoundpadApi api, MicBoost boost, Func<AppConfig> config, IActivityLog log)
     {
         _api = api;
+        _boost = boost;
         _config = config;
         _log = log;
         InitializeComponent();
@@ -42,7 +44,7 @@ public partial class OverlayWindow : Window
         View.RowClicked += (row, modifiers) =>
         {
             if (!_release.IsWaiting)
-                _ = PlayAsync(row, TargetFor(modifiers));
+                _ = PlayAsync(row, BoostFor(modifiers));
         };
         // A new search keeps the old scroll offset otherwise; bring the highlighted row into view.
         Vm.PropertyChanged += (_, e) =>
@@ -143,13 +145,10 @@ public partial class OverlayWindow : Window
         }
     }
 
-    /// <summary>Same rule for Enter and for a click: Shift is speakers only, Ctrl is mic only.</summary>
-    internal static PlayTarget TargetFor(ModifierKeys modifiers) =>
-        modifiers.HasFlag(ModifierKeys.Shift) ? PlayTarget.SpeakersOnly
-        : modifiers.HasFlag(ModifierKeys.Control) ? PlayTarget.MicOnly
-        : PlayTarget.SoundpadDefault;
+    /// <summary>Same rule for Enter and for a click: Shift plays it +30 dB on the mic.</summary>
+    internal static bool BoostFor(ModifierKeys modifiers) => modifiers.HasFlag(ModifierKeys.Shift);
 
-    private async Task PlayAsync(SoundRow row, PlayTarget target)
+    private async Task PlayAsync(SoundRow row, bool boost)
     {
         if (_playing)
             return;
@@ -165,11 +164,21 @@ public partial class OverlayWindow : Window
                 return;
             }
 
-            await _api.PlayAsync(current.Sound.Index, target);
-            if (_config().CloseAfterPlay)
-                CloseToGame();
+            if (boost)
+            {
+                // The boost holds for a moment after the sound starts; close as soon as it plays.
+                await _boost.PlayBoostedAsync(current.Sound.Index, playing: () => Dispatcher.BeginInvoke(() => AfterPlay(current.Sound, boost)));
+            }
             else
-                Vm.SetStatus($"Playing {current.Sound.DisplayTitle}", isError: false);
+            {
+                await _api.PlayAsync(current.Sound.Index, PlayTarget.SoundpadDefault);
+                AfterPlay(current.Sound, boost);
+            }
+        }
+        catch (MicBoostException e)
+        {
+            Vm.SetStatus(e.Message, isError: true);
+            _log.Add($"+30 dB boost: {e.Message}");
         }
         catch (SoundpadOfflineException e)
         {
@@ -184,6 +193,14 @@ public partial class OverlayWindow : Window
         {
             _playing = false;
         }
+    }
+
+    private void AfterPlay(Sound sound, bool boosted)
+    {
+        if (_config().CloseAfterPlay)
+            CloseToGame();
+        else
+            Vm.SetStatus($"Playing {sound.DisplayTitle}{(boosted ? " at +30 dB" : "")}", isError: false);
     }
 
     private void OnPreviewKeyDown(object sender, KeyEventArgs e)
@@ -212,7 +229,7 @@ public partial class OverlayWindow : Window
                 break;
             case Key.Enter:
                 if (Vm.Selected is { } row)
-                    _ = PlayAsync(row, TargetFor(Keyboard.Modifiers));
+                    _ = PlayAsync(row, BoostFor(Keyboard.Modifiers));
                 break;
             default:
                 return;

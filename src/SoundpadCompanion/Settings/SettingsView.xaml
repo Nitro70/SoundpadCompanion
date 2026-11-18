@@ -78,7 +78,7 @@
                     <TextBlock Text="{Binding HotkeyMessage}" Style="{StaticResource HotkeyMessageText}" Margin="70,6,0,0" />
                     <CheckBox Content="Close the overlay once a sound starts" IsChecked="{Binding CloseAfterPlay}" Margin="0,14,0,0" />
                     <TextBlock Style="{StaticResource Muted}" Margin="0,12,0,0"
-                               Text="In the overlay: click a sound or press Enter to play it the way Soundpad normally would. Hold Shift to play it on your speakers only (a preview), or Ctrl for the mic only. Arrow keys or the mouse wheel move through the list, Esc closes and puts you back in your game." />
+                               Text="In the overlay: click a sound or press Enter to play it the way Soundpad normally would. Hold Shift to play it 30 dB louder on the mic, distorted, while you hear it as normal (needs Soundpad's &quot;Fixed volume adjustment&quot;). Arrow keys or the mouse wheel move through the list, Esc closes and puts you back in your game." />
                 </StackPanel>
             </Border>
 

@@ -34,6 +34,9 @@ public partial class App : Application, ISettingsHost
 
     public AppConfig Config { get; private set; } = new();
     public SoundpadApi Api { get; } = new(new SoundpadPipe());
+    private MicBoost Boost => _boost ??= new MicBoost(Api, new SoundpadProcessMemory(), SoundpadRegistry.ReadAudioSettings,
+        startLimit: TimeSpan.FromSeconds(1.5), hold: TimeSpan.FromSeconds(0.4));
+    private MicBoost? _boost;
     public string? HotkeyProblem { get; private set; }
     public ObservableCollection<string> LogEntries => _log.Entries;
     IActivityLog ISettingsHost.Log => _log;
@@ -75,7 +78,8 @@ public partial class App : Application, ISettingsHost
         _store = new ConfigStore(dataDir);
         (Config, bool firstRun) = _store.Load(_log);
 
-        _overlay = new OverlayWindow(Api, () => Config, _log);
+        RecoverMicBoost();
+        _overlay = new OverlayWindow(Api, Boost, () => Config, _log);
         _hotkey = new GlobalHotkey();
         _hotkey.Pressed += () => _overlay.Toggle();
         RegisterConfiguredHotkey();
@@ -217,7 +221,7 @@ public partial class App : Application, ISettingsHost
         Check("theme", () => Resources["AccentBrush"]?.ToString() ?? throw new InvalidOperationException("missing"));
         Check("window icon", () => AppIcon.ImageSource?.ToString() ?? throw new InvalidOperationException("missing"));
         Check("tray icon", () => { using var icon = AppIcon.LoadTrayIcon(); return $"{icon.Width}x{icon.Height}"; });
-        Check("overlay window", () => { var w = new OverlayWindow(Api, () => Config, _log); w.Close(); return "built"; });
+        Check("overlay window", () => { var w = new OverlayWindow(Api, Boost, () => Config, _log); w.Close(); return "built"; });
         Check("settings view", () => { _ = new SettingsView(); return "built"; });
         try
         {
@@ -232,6 +236,15 @@ public partial class App : Application, ISettingsHost
             report.Add($"FAIL  soundpad: {ex.Message}");
         }
 
+        try
+        {
+            report.Add($"ok    mic boost: {Boost.Describe()}");   // read-only: nothing is written
+        }
+        catch (MicBoostException ex)
+        {
+            report.Add($"info  mic boost: {ex.Message}");
+        }
+
         report.Add(failures == 0 ? "PASS" : $"{failures} FAILED");
         if (reportPath is not null)
         {
@@ -239,6 +252,20 @@ public partial class App : Application, ISettingsHost
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
         }
         Shutdown(failures == 0 ? 0 : 1);
+    }
+
+    /// <summary>If the app was closed in the middle of a +30 dB boost, Soundpad is still at +30: put it back.</summary>
+    private void RecoverMicBoost()
+    {
+        try
+        {
+            if (Boost.RecoverIfStuck() is { } fixedIt)
+                _log.Add(fixedIt);
+        }
+        catch (MicBoostException e)
+        {
+            _log.Add($"+30 dB boost check at start: {e.Message}");
+        }
     }
 
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)

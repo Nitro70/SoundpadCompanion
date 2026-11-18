@@ -46,7 +46,8 @@ public sealed class MicBoost(
     public const float BoostDb = 30f;
     private static readonly TimeSpan Poll = TimeSpan.FromMilliseconds(15);
 
-    public async Task PlayBoostedAsync(int index, CancellationToken ct = default)
+    /// <param name="playing">Called (off the UI thread) as soon as Soundpad has accepted the play, before the hold ends.</param>
+    public async Task PlayBoostedAsync(int index, Action? playing = null, CancellationToken ct = default)
     {
         var saved = Saved();
         if (!saved.FixedMode)
@@ -60,6 +61,7 @@ public sealed class MicBoost(
         {
             long played = Stopwatch.GetTimestamp();
             await api.PlayAsync(index, PlayTarget.SoundpadDefault, ct).ConfigureAwait(false);
+            playing?.Invoke();
             await WaitForStartAsync(before, ct).ConfigureAwait(false);
             var left = hold - Stopwatch.GetElapsedTime(played);
             if (left > TimeSpan.Zero)

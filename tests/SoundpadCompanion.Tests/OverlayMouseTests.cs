@@ -140,9 +140,10 @@ public class OverlayMouseTests
     }
 
     [Theory]
-    [InlineData(ModifierKeys.None, PlayTarget.SoundpadDefault)]
-    [InlineData(ModifierKeys.Shift, PlayTarget.SpeakersOnly)]
-    [InlineData(ModifierKeys.Control, PlayTarget.MicOnly)]
-    public void Shift_and_Ctrl_mean_the_same_for_clicks_as_for_Enter(ModifierKeys mods, PlayTarget expected) =>
-        Assert.Equal(expected, OverlayWindow.TargetFor(mods));
+    [InlineData(ModifierKeys.None, false)]
+    [InlineData(ModifierKeys.Shift, true)]
+    [InlineData(ModifierKeys.Control, false)]
+    [InlineData(ModifierKeys.Shift | ModifierKeys.Control, true)]
+    public void Shift_boosts_for_clicks_as_for_Enter_and_Ctrl_does_nothing(ModifierKeys mods, bool boost) =>
+        Assert.Equal(boost, OverlayWindow.BoostFor(mods));
 }

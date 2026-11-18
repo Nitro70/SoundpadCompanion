@@ -66,6 +66,26 @@ public class MicBoostTests
     }
 
     [Fact]
+    public async Task Says_the_sound_is_playing_before_the_hold_ends()
+    {
+        // The overlay closes on this, instead of staying up for the whole hold.
+        var s = Normal();
+        await s.Boost().PlayBoostedAsync(5, playing: () => s.Events.Add("playing"));
+
+        Assert.Equal(["GetPlaybackPositionInMs()", "write 30", "DoPlaySound(5)", "playing", "GetPlaybackPositionInMs()", "write -9"], s.Events);
+    }
+
+    [Fact]
+    public async Task Never_says_playing_when_the_play_fails()
+    {
+        var s = Normal();
+        s.PlayReply = "R-404";
+
+        await Assert.ThrowsAsync<SoundpadCommandException>(() => s.Boost().PlayBoostedAsync(5, playing: () => s.Events.Add("playing")));
+        Assert.DoesNotContain("playing", s.Events);
+    }
+
+    [Fact]
     public async Task Waits_for_the_new_sound_to_start_before_putting_it_back()
     {
         // When stopped, Soundpad still reports where the last sound ended (2073 ms in the real one);
