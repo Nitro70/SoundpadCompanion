@@ -9,7 +9,7 @@ A small Windows tray app that adds two things to [Soundpad](https://www.leppsoft
 
 It does not patch or inject anything into Soundpad. It talks to Soundpad through Soundpad's own [remote control interface](https://www.leppsoft.com/soundpad/rc), the local named pipe `\\.\pipe\sp_remote_control` that Stream Deck and Touch Portal plugins also use. Not affiliated with Leppsoft.
 
-**Status: early (0.1.1).** The overlay has been used over a game with a real Soundpad 4.0.35: searching, playing a sound and closing back to the game. The idea behind the Shift boost was measured on a real Soundpad 4.0.35 (see [below](#the-30-db-boost)), but the app's own Shift boost has not been tried on a real install yet. The folder import is covered by automated tests against a simulated Soundpad, plus read-only checks against a real one, but has not been confirmed on a real install yet. If the first import fails, the Activity list in the settings window shows Soundpad's error code; please open an issue with it.
+**Status: early (0.1.2).** The overlay has been used over a game with a real Soundpad 4.0.35: searching, playing a sound and closing back to the game. The Shift boost (see [below](#the-30-db-boost)) has been used with a real Soundpad 4.0.35 too. The folder import is covered by automated tests against a simulated Soundpad, plus read-only checks against a real one, but has not been confirmed on a real install yet. If the first import fails, the Activity list in the settings window shows Soundpad's error code; please open an issue with it.
 
 ## Download
 

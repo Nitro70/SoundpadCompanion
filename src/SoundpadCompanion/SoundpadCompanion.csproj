@@ -12,7 +12,7 @@
     <RootNamespace>SoundpadCompanion</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
-    <Version>0.1.1</Version>
+    <Version>0.1.2</Version>
     <Product>Soundpad Companion</Product>
     <Authors>Nitro70</Authors>
     <Company>Nitro70</Company>
